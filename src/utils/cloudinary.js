@@ -9,7 +9,7 @@ cloudinary.config({
 });
 
 // Define an asynchronous function to upload a file to Cloudinary
-const uploadOnClodinary = async (localFilePath) => {
+const uploadOnCloudinary = async (localFilePath) => {
     try {
         // Check if the file path is provided
         if (!localFilePath) return null;
@@ -34,4 +34,4 @@ const uploadOnClodinary = async (localFilePath) => {
 };
 
 // Export the upload function for use in other modules
-export { uploadOnClodinary };
+export { uploadOnCloudinary };
