@@ -1,11 +1,16 @@
+// asyncHandler utility function takes a requestHandler function as a parameter
 const asyncHandler = (requestHandler) => {
+    // Returns a middleware function with parameters req (request), res (response), and next (next middleware function)
     return (req, res, next) => {
-        Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
+        // Wraps the execution of the asynchronous requestHandler in a resolved Promise
+        Promise.resolve(requestHandler(req, res, next))
+            // Catches any errors that occur during the execution of the requestHandler
+            .catch((err) => next(err));
     }
 }
 
-
 export { asyncHandler }
+
 
 // const asyncHandler = () => { }
 // const asyncHandler = (func) => () => { }
