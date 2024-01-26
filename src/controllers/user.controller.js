@@ -451,6 +451,89 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         );
 })
 
+// Define an asynchronous route handler using asyncHandler for fetching user channel profile
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    // Extract the username from request parameters
+    const {username} = req.params
+
+    // Check if the username is missing or empty
+    if (!username?.trim()) {
+        throw new ApiError(400, "username is missing")
+    }
+
+    // Use the User aggregate function to perform aggregation pipeline
+    const channel = await User.aggregate([
+        {
+            // Match documents with the specified username (case insensitive)
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            // Lookup subscriptions to get the number of subscribers
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            // Lookup subscriptions to get the number of channels subscribed to
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            // Add fields to the document, including subscribers count,
+            // channels subscribed to count, and whether the current user is subscribed
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            // Project only the desired fields in the final result
+            $project: {
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+
+            }
+        }
+    ])
+
+    // If no channel is found, throw a 404 error
+    if (!channel?.length) {
+        throw new ApiError(404, "channel does not exists")
+    }
+
+    // Return a JSON response with a success message and the channel data
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, channel[0], "User channel fetched successfully")
+    )
+})
 
 export {
     registerUser,
@@ -461,5 +544,6 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile,
 };
