@@ -535,6 +535,69 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     )
 })
 
+// Define an asynchronous route handler using asyncHandler for fetching user watch history
+const getWatchHistory = asyncHandler(async (req, res) => {
+    // Use the User aggregate function to perform aggregation pipeline
+    const user = await User.aggregate([
+        {
+            // Match documents with the specified user ID
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            // Lookup videos based on the watchHistory array
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                // Nested pipeline to perform additional lookups and transformations on videos
+                pipeline: [
+                    {
+                         // Lookup users to get additional information about the video owner
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                             // Additional pipeline to project specific fields from the owner
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        // AddFields to rename the "owner" array to a single object
+                        $addFields:{
+                            owner:{
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    // Return a JSON response with a success message and the user's watch history
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch history fetched successfully"
+        )
+    )
+})
+
 export {
     registerUser,
     loginUser,
@@ -546,4 +609,5 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
+    getWatchHistory
 };
