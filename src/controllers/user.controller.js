@@ -44,7 +44,8 @@ const registerUser = asyncHandler(async (req, res) => {
     // return res
 
     // Extract user details from the request body
-    const { fullName, email, username, password } = req.body;
+    const {fullName, email, username, password } = req.body
+    //console.log("email: ", email);
 
     // Validate that none of the required fields are empty
     if (
@@ -55,35 +56,36 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // Check if a user with the same username or email already exists
     const existedUser = await User.findOne({
-        $or: [{ username }, { email }],
-    });
+        $or: [{ username }, { email }]
+    })
 
     if (existedUser) {
-        throw new ApiError(409, "User with email or username already exists");
+        throw new ApiError(409, "User with email or username already exists")
     }
+    //console.log(req.files);
 
     // Get the local path of the avatar and cover image files
     const avatarLocalPath = req.files?.avatar[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
-    
+
     let coverImageLocalPath;
     // Check if coverImage file exists in the request
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
         coverImageLocalPath = req.files.coverImage[0].path
     }
-
+    
     // Check if avatar file is provided
     if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar file is required");
+        throw new ApiError(400, "Avatar file is required")
     }
 
     // Upload avatar and coverImage files to Cloudinary
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
     // Check if avatar upload was successful
     if (!avatar) {
-        throw new ApiError(400, "Avatar file upload failed");
+        throw new ApiError(400, "Avatar file is required")
     }
 
     // Create a new user in the database
@@ -91,15 +93,15 @@ const registerUser = asyncHandler(async (req, res) => {
         fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || "",
-        email,
+        email, 
         password,
-        username: username.toLowerCase(),
-    });
+        username: username.toLowerCase()
+    })
 
     // Retrieve the created user excluding sensitive information
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
-    );
+    )
 
     // Check if user creation was successful
     if (!createdUser) {
@@ -110,7 +112,8 @@ const registerUser = asyncHandler(async (req, res) => {
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
-});
+} )
+
 
 // Define an asynchronous function to handle user login
 const loginUser = asyncHandler(async (req, res) =>{
