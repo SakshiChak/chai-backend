@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary , deleteFromCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -113,7 +113,6 @@ const registerUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
 } )
-
 
 // Define an asynchronous function to handle user login
 const loginUser = asyncHandler(async (req, res) =>{
@@ -343,116 +342,109 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    // Getting the local path of the uploaded avatar file from the request
-    const avatarLocalPath = req.file?.path;
+    // Get the local path of the uploaded avatar file from the request
+    const avatarLocalPath = req.file.path;
 
-    // If the avatar file is missing, throw an ApiError with status code 400
+    // Check if the avatar file path is missing and throw an error if it is
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is missing");
     }
 
 
-    // TODO: Delete old image - Assignment (You can add the logic for deleting the old image here)
+    // Find the user by their ID from the request
+    const user = await User.findById(req.user?._id);
 
-    // Fetching the user to get the current avatar URL
-    const currentUser = await User.findById(req.user?._id);
-
-    // Deleting the old avatar from Cloudinary if it exists
-    if (currentUser.avatar) {
-        // Extracting the public ID from the Cloudinary URL
-        const publicId = currentUser.avatar.split('/').pop().split('.')[0];
-
-        try {
-            // Deleting the old avatar using the Cloudinary API
-            await cloudinary.uploader.destroy(publicId);
-        } catch (error) {
-            // Handling errors that may occur during the deletion process
-            throw new ApiError(500, 'Internal Server Error');
-        }
+    if (!user) {
+        throw new ApiError(404, "User not found");
     }
 
+    // Delete old avatar from clodinary
+    if (user.avatar) {
+        const oldAvatarPublicId = user.avatar.split("/").pop().split(".")[0];
+        await deleteFromCloudinary(oldAvatarPublicId)
+    }
 
-    // Uploading the avatar image to Cloudinary and obtaining the result
+     // Upload the avatar to Cloudinary and get the resulting avatar object
     const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-    // If there is an error while uploading the avatar, throw an ApiError with status code 400
+     // Check if the avatar upload was successful, otherwise throw an error
     if (!avatar.url) {
-        throw new ApiError(400, "Error while uploading the avatar");
+        throw new ApiError(400, "Error while uploading avatar file");
     }
-
-    // Updating the user's avatar URL in the database using findByIdAndUpdate
-    const user = await User.findByIdAndUpdate(
-        req.user?._id, // User ID obtained from the authenticated request
+    
+    // Update the user's avatar URL in the database
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
         {
             $set: {
-                avatar: avatar.url, // Updating the avatar field with the new URL
+                avatar: avatar.url,
             },
         },
-        { new: true } // Returning the updated document instead of the original
-    ).select("-password"); // Excluding the password field from the response
+        // Return the updated user object and exclude the password field
+        { new: true }
+    ).select("-password");
 
-    // Returning a JSON response with status code 200 and a success message
+
+    // Respond with a success status, the updated user object, and a success message
     return res
         .status(200)
         .json(
-            new ApiResponse(200, user, "Avatar image updated successfully")
+            new ApiResponse(
+                200,
+                updatedUser,
+                "avatar image updated successfully"
+            )
         );
-})
+});
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    // Getting the local path of the uploaded cover image file from the request
+    // Get the local path of the uploaded cover image file from the request
     const coverImageLocalPath = req.file?.path;
 
-    // If the cover image file is missing, throw an ApiError with status code 400
+    // Check if the cover image file path is missing and throw an error if it is
     if (!coverImageLocalPath) {
-        throw new ApiError(400, "Cover image file is missing");
+        throw new ApiError(400, "Cover file is missing");
     }
 
-    // TODO: Delete old image - Assignment (You can add the logic for deleting the old cover image here)
+    // Find the user by their ID from the request
+    const user = await User.findById(req.user?._id);
 
-    // Fetching the user to get the current cover image URL
-    const currentUser = await User.findById(req.user?._id);
-
-    // Deleting the old cover image from Cloudinary if it exists
-    if (currentUser.coverImage) {
-        // Extracting the public ID from the Cloudinary URL
-        const publicId = currentUser.coverImage.split('/').pop().split('.')[0];
-
-        try {
-            // Deleting the old cover image using the Cloudinary API
-            await cloudinary.uploader.destroy(publicId);
-        } catch (error) {
-            // Handling errors that may occur during the deletion process
-            throw new ApiError(500, 'Internal Server Error');
-        }
+    if (!user) {
+        throw new ApiError(404, "User not found");
     }
 
-    // Uploading the cover image to Cloudinary and obtaining the result
+    // Delete old coverImage from clodinary
+    if (user.coverImage) {
+        const oldCoverImagePublicId = user.coverImage.split("/").pop().split(".")[0];
+        await deleteFromCloudinary(oldCoverImagePublicId)
+    }
+
+    // Upload the cover image to Cloudinary and get the resulting cover image object
     const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-    // If there is an error while uploading the cover image, throw an ApiError with status code 400
+    // Check if the cover image upload was successful, otherwise throw an error
     if (!coverImage.url) {
-        throw new ApiError(400, "Error while uploading the cover image");
+        throw new ApiError(400, "Error while uploading cover image file");
     }
 
-    // Updating the user's cover image URL in the database using findByIdAndUpdate
-    const user = await User.findByIdAndUpdate(
-        req.user?._id, // User ID obtained from the authenticated request
+
+    // Update the user's cover image URL in the database
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
         {
             $set: {
-                coverImage: coverImage.url, // Updating the coverImage field with the new URL
+                coverImage: coverImage.url,
             },
         },
-        { new: true } // Returning the updated document instead of the original
-    ).select("-password"); // Excluding the password field from the response
+        // Return the updated user object and exclude the password field
+        { new: true }
+    ).select("-password");
 
-    // Returning a JSON response with status code 200 and a success message
+    // Respond with a success status, the updated user object, and a success message
     return res
         .status(200)
-        .json(
-            new ApiResponse(200, user, "Cover image updated successfully")
-        );
-})
+        .json(new ApiResponse(200, updatedUser, "Cover image updated successfully"));
+});
 
 // Define an asynchronous route handler using asyncHandler for fetching user channel profile
 const getUserChannelProfile = asyncHandler(async (req, res) => {
