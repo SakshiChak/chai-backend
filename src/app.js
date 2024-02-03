@@ -24,11 +24,14 @@ app.use(express.static("public"))
 // Configuring middleware to parse cookies
 app.use(cookieParser())
 
-// Importing user routes from a separate file
-import userRouter from './routes/user.routes.js' 
+// Importing routes from a separate file
+import userRouter from './routes/user.routes.js';
+import playlistRouter from "./routes/playlist.routes.js";
 
-// Declaring routes for users
+
+// Declaring routes 
 app.use("/api/v1/users", userRouter)
+app.use("/api/v1/playlist", playlistRouter);
 
 // Example route: http://localhost:8000/api/v1/users/register
 
