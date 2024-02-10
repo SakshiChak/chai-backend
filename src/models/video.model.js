@@ -6,12 +6,18 @@ const videoSchema = new Schema(
     {
         // Cloudinary URL for the video file
         videoFile: {
-            type: String,
+            type: {
+                url: String,
+                public_id: String,
+            },
             required: true,
         },
         // Cloudinary URL for the video thumbnail
         thumbnail: {
-            type: String,
+            type: {
+                url: String,
+                public_id: String,
+            },
             required: true,
         },
         // Title of the video
@@ -34,10 +40,10 @@ const videoSchema = new Schema(
             type: Number,
             default: 0,
         },
-        // Boolean indicating whether the video is published or not (default is true)
+        // Boolean indicating whether the video is published or not (default is false)
         isPublished: {
             type: Boolean,
-            default: true,
+            defaultValue: false,
         },
         // Reference to the owner user using their ObjectId
         owner: {
