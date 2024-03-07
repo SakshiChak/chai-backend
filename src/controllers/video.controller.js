@@ -13,8 +13,10 @@ import { Like } from "../models/like.model.js";
 
 // get all videos based on query, sort, pagination
 const getAllVideos = asyncHandler(async (req, res) => {
+    // Destructuring request query parameters with default values
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
     console.log(userId);
+    // Pipeline array to build MongoDB aggregation pipeline stages
     const pipeline = [];
 
     // for using Full Text based search u need to create a search index in mongoDB atlas
@@ -23,6 +25,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     // this helps in seraching only in title, desc providing faster search results
     // here the name of search index is 'search-videos'
     if (query) {
+        // Add $search stage to pipeline for full-text search on 'title' and 'description' fields
         pipeline.push({
             $search: {
                 index: "search-videos",
@@ -34,11 +37,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
         });
     }
 
+    // Check if userId is provided
     if (userId) {
         if (!isValidObjectId(userId)) {
             throw new ApiError(400, "Invalid userId");
         }
 
+        // Add $match stage to pipeline to filter videos by owner's userId
         pipeline.push({
             $match: {
                 owner: new mongoose.Types.ObjectId(userId)
@@ -58,9 +63,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
             }
         });
     } else {
+        // If sortBy and sortType not provided, default sort by 'createdAt' in descending order
         pipeline.push({ $sort: { createdAt: -1 } });
     }
 
+    // Perform a $lookup stage to retrieve owner details from 'users' collection
     pipeline.push(
         {
             $lookup: {
@@ -83,13 +90,16 @@ const getAllVideos = asyncHandler(async (req, res) => {
         }
     )
 
+    // Create aggregation object with the pipeline
     const videoAggregate = Video.aggregate(pipeline);
 
+    // Pagination options
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10)
     };
 
+    // Aggregate paginated results
     const video = await Video.aggregatePaginate(videoAggregate, options);
 
     return res
